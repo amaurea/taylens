@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import numpy as np, healpy, argparse, sys, warnings
-from mpi4py import MPI
 from taylens import *
 warnings.filterwarnings('ignore')
 parser = argparse.ArgumentParser(description="Simulate CMB and lensing potentials maps, use the latter to lens the former, and output the power spectrum of the resulting lensed map.")
@@ -21,8 +20,13 @@ args = parser.parse_args()
 prt = args.verbose and tprint or silent
 prt("Start")
 
-comm = MPI.COMM_WORLD
-myid, nproc = comm.Get_rank(), comm.Get_size()
+try:
+	from mpi4py import MPI
+	comm = MPI.COMM_WORLD
+	myid, nproc = comm.Get_rank(), comm.Get_size()
+except ImportError:
+	myid, nproc = 0, 1
+
 synlmax = args.synlmax
 if synlmax is None: synlmax = 8*args.nside
 
