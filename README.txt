@@ -3,7 +3,13 @@ interpolation lensing. It is provided in the taylens module, which
 defines the core functionality, and a driver script "taysim.py",
 which provides a convenient command-line interface.
 
-Taylens depends on python2, scipy and healpy.
+Taylens depends on reasonably recent versions of python2, scipy and
+healpy, as well as optionally depending on mpi4py for MPI support.
+It has been tested and found to work with
+
+ python 2.7.5 - numpy 1.7.1 - healpy 1.6.1
+ python 2.7.2 - numpy 1.7.1 - healpy 1.6.1
+ python 2.7.3 - numpy ?.?.? - healpy 1.6.2
 
 Here are some simple usage examples:
 
@@ -30,6 +36,8 @@ Here are some simple usage examples:
      As example 1, but outputs the unlensed CMB simulation
      as out/ucmb000_3.fits (u), the lensed CMB as out/lcmb000_3.fits (l),
      and the lensed spectrum as out/spec000_3.txt (s).
+     (Other possible outputs are the lensing potential (p) and its
+     gradient (g).)
 
   4. mpirun -npernode 1 python taysim.py -n 256 -p -nside 1024 -v
 
