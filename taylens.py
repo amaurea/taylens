@@ -48,9 +48,9 @@ def taylor_interpol_iter(m, pos, order=3, verbose=False, lmax=None):
 				continue
 			a = healpy.map2alm(derivs[i], use_weights=True, lmax=lmax, iter=0)
 			derivs[i] = None
-			m, dtheta, dphi = healpy.alm2map_der1(a, nside, lmax=lmax)
+			dtheta, dphi = healpy.alm2map_der1(a, nside, lmax=lmax)[-2:]
 			derivs2[i:i+2] = [dtheta,dphi]
-			del a, m, dtheta, dphi
+			del a, dtheta, dphi
 			# Use these to compute the next level
 			for j in range(i,min(i+2,o+1)):
 				if used[j]: continue
