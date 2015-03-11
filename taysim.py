@@ -1,6 +1,26 @@
 #!/usr/bin/env python
 import numpy as np, healpy, argparse, sys, warnings
 from taylens import *
+
+# This generates correlated T,E,B and Phi maps
+def simulate_tebp_correlated(cl_tebp_arr,nside,lmax) :
+	alms=healpy.synalm(cl_tebp_arr,lmax=lmax,new=True)
+
+	if cl_tebp_arr.shape[0]==3 :
+		acmb=alms[0]
+		aphi=alms[1]
+		cmb=healpy.alm2map(acmb,nside,lmax=lmax,mmax=lmax)
+	elif cl_tebp_arr.shape[0]==10 :
+		acmb=alms[0:-1]
+		aphi=alms[-1]
+		cmb=np.array(healpy.alm2map(acmb,nside,lmax=lmax,
+					    mmax=lmax,pol=True))
+	else :
+		print "This is bullshit"
+		sys.exit()
+
+	return cmb,aphi
+
 warnings.filterwarnings('ignore')
 parser = argparse.ArgumentParser(description="Simulate CMB and lensing potentials maps, use the latter to lens the former, and output the power spectrum of the resulting lensed map.")
 parser.add_argument("specs", help="Input power spectrum file in CAMB format.")
@@ -34,18 +54,27 @@ if args.seed is not None:
 	np.random.seed(args.seed+myid)
 
 # Read the input spectra (in CAMB format)
-specs = readspec(args.specs)
-Cl = np.zeros((4,specs.shape[1]))
-Cl[[0,1,3],:] = specs[:3]
-Cphi = specs[3]
-
-# Scale them appropriately
-l = np.arange(specs.shape[1])
-Cl[:,1:] /= l[1:]*(l[1:]+1)/(2*np.pi)
-Cphi[1:] /= l[1:]**4*2.726e6**2
-
-if not args.pol: Cl = Cl[0]
+data=np.transpose(np.loadtxt(args.specs))
+lmax_cl=len(data[0])+1
+l=np.arange(int(lmax_cl+1))
 synlmax = min(synlmax, l[-1])
+if not args.pol :
+	cl_tebp_arr=np.zeros([3,lmax_cl+1])
+	cl_tebp_arr[0,2:]=2*np.pi*data[1]/(l[2:]*(l[2:]+1))      #TT
+	cl_tebp_arr[1,2:]=2*np.pi*data[5]/(l[2:]*(l[2:]+1))**2   #PP
+	cl_tebp_arr[2,2:]=2*np.pi*data[6]/(l[2:]*(l[2:]+1))**1.5 #TP
+else :
+	cl_tebp_arr=np.zeros([10,lmax_cl+1])
+	cl_tebp_arr[0,2:]=2*np.pi*data[1]/(l[2:]*(l[2:]+1))      #TT
+	cl_tebp_arr[1,2:]=2*np.pi*data[2]/(l[2:]*(l[2:]+1))      #EE
+	cl_tebp_arr[2,2:]=2*np.pi*data[3]/(l[2:]*(l[2:]+1))      #BB
+	cl_tebp_arr[3,2:]=2*np.pi*data[5]/(l[2:]*(l[2:]+1))**2   #PP
+	cl_tebp_arr[4,2:]=2*np.pi*data[4]/(l[2:]*(l[2:]+1))      #TE
+	cl_tebp_arr[5,:] =np.zeros(lmax_cl+1)                    #EB
+	cl_tebp_arr[6,:] =np.zeros(lmax_cl+1)                    #BP
+	cl_tebp_arr[7,:] =np.zeros(lmax_cl+1)                    #TB
+	cl_tebp_arr[8,2:]=2*np.pi*data[7]/(l[2:]*(l[2:]+1))**1.5 #EP
+	cl_tebp_arr[9,2:]=2*np.pi*data[6]/(l[2:]*(l[2:]+1))**1.5 #TP
 
 # Coordinates of healpix pixel centers
 prt("Computing ipos")
@@ -54,15 +83,15 @@ ipos = np.array(healpy.pix2ang(args.nside, np.arange(12*args.nside**2)))
 for sim in range(myid, args.nsim, nproc):
 	# Simulate a CMB and lensing field
 	prt("Simulation %d of %d" % (sim+1,args.nsim))
-	prt("Simulating cmb")
-	cmb = np.array(healpy.synfast(Cl,   args.nside, new=True))
+	prt("Simulating cmb and lensing potential jointly")
+	cmb, aphi = simulate_tebp_correlated(cl_tebp_arr,args.nside,synlmax)
+
 	if "u" in args.output:
 		prt("Writing unlensed map")
-		healpy.write_map("%s/ucmb%03d_%d.fits" % (args.odir, sim, args.order), cmb)
+		healpy.write_map("%s/ucmb%03d_%d.fits" % (args.odir, sim, args.order),
+				 cmb)
 	if cmb.ndim == 1: cmb = np.reshape(cmb, [1,cmb.size])
-	prt("Simulating lensing field")
-	aphi = healpy.synalm(Cphi, lmax=synlmax, new=True)
-
+		
 	# Compute the offset positions
 	prt("Computing lensing gradient")
 	phi, phi_dtheta, phi_dphi = healpy.alm2map_der1(aphi, args.nside, lmax=synlmax)
