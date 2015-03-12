@@ -5,19 +5,13 @@ from taylens import *
 # This generates correlated T,E,B and Phi maps
 def simulate_tebp_correlated(cl_tebp_arr,nside,lmax) :
 	alms=healpy.synalm(cl_tebp_arr,lmax=lmax,new=True)
-
-	if cl_tebp_arr.shape[0]==3 :
-		acmb=alms[0]
-		aphi=alms[1]
-		cmb=healpy.alm2map(acmb,nside,lmax=lmax,mmax=lmax)
-	elif cl_tebp_arr.shape[0]==10 :
-		acmb=alms[0:-1]
-		aphi=alms[-1]
-		cmb=np.array(healpy.alm2map(acmb,nside,lmax=lmax,
-					    mmax=lmax,pol=True))
-	else :
-		print "This is bullshit"
-		sys.exit()
+	aphi=alms[-1]
+	acmb=alms[0:-1]
+#Set to zero above map resolution to avoid aliasing
+	beam_cut=np.ones(3*nside)
+	for ac in acmb :
+		healpy.almxfl(ac,beam_cut,inplace=True)
+	cmb=np.array(healpy.alm2map(acmb,nside,pol=True))
 
 	return cmb,aphi
 

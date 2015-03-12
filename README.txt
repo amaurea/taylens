@@ -17,7 +17,7 @@ Here are some simple usage examples:
 
      Generates a random temperature-only realization of the unlensed CMB
      and lensing field at nside 512 from the power spectrum ps.txt, which must be
-     in the same format as CAMB's scalar spectrum, i.e. [l,tt,ee,te,phi,...].
+     in the same format as CAMB's unlensed+lensing spectrum, i.e. [l,tt,ee,bb,te,dd,dt,de].
      The CMB is then lensed with the lensing field at interpolation
      order 3, and the power spectrum of the result is written to
      out/spec000_3.txt. The output spectrum has the format [tt].
